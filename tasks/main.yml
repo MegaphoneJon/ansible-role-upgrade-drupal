@@ -1,0 +1,101 @@
+---
+- name: Ensure file owner/perms are correct
+  file:
+    path: "{{ webroot }}"
+    state: directory
+    mode: ug+rw
+    owner: "{{ run_as_user }}"
+    group: "{{ run_as_user }}"
+    recurse: yes
+  become: yes
+
+- name: git pull
+  git:
+    repo: "{{ git_repo_url }}"
+    dest: "{{ gitroot }}"
+    track_submodules: no
+  become: yes
+  become_user: "{{ run_as_user }}"
+  when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+
+- name: Get current git commit hash
+  command: git rev-parse HEAD
+  args:
+    chdir: "{{ webroot }}"
+  register: latest_commit
+  changed_when: FALSE
+  when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: Composer update
+  composer:
+    command: update
+    working_dir: "{{ gitroot }}"
+  when: cms == 'Drupal8'
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+
+# - name: git add
+#   command: git add -v -A
+#   args:
+#     chdir: "{{ webroot }}"
+#   become: yes
+#   become_user: "{{ run_as_user }}"
+#   register: add_result
+#   changed_when: add_result.stdout != ''
+#   failed_when: add_result.stderr != ''
+#   when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+
+# - name: git commit
+#   command: "git commit -m 'Composer Update'"
+#   args:
+#     chdir: "{{ webroot }}"
+#   register: commit_result
+#   become: yes
+#   become_user: "{{ run_as_user }}"
+#   changed_when: commit_result.rc == 0
+#   failed_when: not(commit_result.rc == 0 or 'nothing to commit, working tree clean' in commit_result.stdout_lines)
+#   when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+
+- name: Check for database updates
+  command: "drush -y --root={{ webroot }} updatedb-status"
+  when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: FALSE
+  register: updatedb_status
+
+- name: Run database updates
+  command: "drush -y --root={{ webroot }} updatedb"
+  when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance") and updatedb_status.stdout != 'No database updates required'
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: git push
+  command: git push
+  args:
+    chdir: "{{ webroot }}"
+  register: push_result_addl
+  become: yes
+  become_user: "{{ run_as_user }}"
+  when: git_repo_push_url is not search("https://")
+  changed_when: push_result_addl.rc == 0 and push_result_addl.stderr != 'Everything up-to-date'
+  failed_when: not(push_result_addl.rc == 0)
+
+- name: Get git changelog (D8+ specific)
+  command: "git log HEAD^..HEAD"
+  args:
+    chdir: "{{ webroot }}"
+  register: changelog
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: FALSE
+  when: latest_commit.stdout is defined
+
+- name: Print git changelog
+  debug:
+    var: changelog.stdout
+  changed_when: FALSE
+  when: latest_commit.stdout is defined
