@@ -37,27 +37,27 @@
   become_user: "{{ run_as_user }}"
 
 
-# - name: git add
-#   command: git add -v -A
-#   args:
-#     chdir: "{{ webroot }}"
-#   become: yes
-#   become_user: "{{ run_as_user }}"
-#   register: add_result
-#   changed_when: add_result.stdout != ''
-#   failed_when: add_result.stderr != ''
-#   when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+- name: git add
+  command: git add -v -A composer.*
+  args:
+    chdir: "{{ webroot }}"
+  become: yes
+  become_user: "{{ run_as_user }}"
+  register: add_result
+  changed_when: add_result.stdout != ''
+  failed_when: add_result.stderr != ''
+  when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
 
-# - name: git commit
-#   command: "git commit -m 'Composer Update'"
-#   args:
-#     chdir: "{{ webroot }}"
-#   register: commit_result
-#   become: yes
-#   become_user: "{{ run_as_user }}"
-#   changed_when: commit_result.rc == 0
-#   failed_when: not(commit_result.rc == 0 or 'nothing to commit, working tree clean' in commit_result.stdout_lines)
-#   when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+- name: git commit
+  command: "git commit -m 'Composer Update'"
+  args:
+    chdir: "{{ webroot }}"
+  register: commit_result
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: commit_result.rc == 0
+  failed_when: not(commit_result.rc == 0 or 'nothing to commit, working tree clean' in commit_result.stdout_lines)
+  when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
 
 - name: Check for database updates
   command: "drush -y --root={{ webroot }} updatedb-status"
