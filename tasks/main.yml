@@ -40,7 +40,7 @@
 - name: git add
   command: git add -v -A composer.*
   args:
-    chdir: "{{ webroot }}"
+    chdir: "{{ gitroot }}"
   become: yes
   become_user: "{{ run_as_user }}"
   register: add_result
@@ -51,7 +51,7 @@
 - name: git commit
   command: "git commit -m 'Composer Update'"
   args:
-    chdir: "{{ webroot }}"
+    chdir: "{{ gitroot }}"
   register: commit_result
   become: yes
   become_user: "{{ run_as_user }}"
@@ -76,7 +76,7 @@
 - name: git push
   command: git push
   args:
-    chdir: "{{ webroot }}"
+    chdir: "{{ gitroot }}"
   register: push_result_addl
   become: yes
   become_user: "{{ run_as_user }}"
@@ -87,7 +87,7 @@
 - name: Get git changelog (D8+ specific)
   command: "git log HEAD^..HEAD"
   args:
-    chdir: "{{ webroot }}"
+    chdir: "{{ gitroot }}"
   register: changelog
   become: yes
   become_user: "{{ run_as_user }}"
