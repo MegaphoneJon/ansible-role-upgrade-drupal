@@ -18,6 +18,14 @@
   become_user: "{{ run_as_user }}"
   when: cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
 
+- name: Create or reset upgrade branch
+  command: git checkout -B upgrade
+  args:
+    chdir: "{{ gitroot }}"
+  become: yes
+  become_user: "{{ run_as_user }}"
+  when: upgrade_use_branch and cms == 'Drupal8' and contract_type is search("Drupal Maintenance")
+
 - name: Get current git commit hash
   command: git rev-parse HEAD
   args:
@@ -74,7 +82,7 @@
   become_user: "{{ run_as_user }}"
 
 - name: git push
-  command: git push
+  command: "git push{{ ' -u origin upgrade' if upgrade_use_branch else '' }}"
   args:
     chdir: "{{ gitroot }}"
   register: push_result_addl
@@ -96,6 +104,6 @@
 
 - name: Print git changelog
   debug:
-    var: changelog.stdout
+    var: changelog.stdout_lines
   changed_when: FALSE
   when: latest_commit.stdout is defined
